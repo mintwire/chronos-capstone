@@ -1,0 +1,232 @@
+{
+  "info": {
+    "name": "Chronos Capstone - Demo Tests",
+    "description": "Postman collection with demo requests and tests for Chronos job scheduler",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5050" },
+    { "key": "adminKey", "value": "dev-SECRET-CHRONOS-2026" },
+    { "key": "jobId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Health returns 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "var json = pm.response.json();",
+              "pm.test('Health status ok', function () {",
+              "  pm.expect(json.status).to.eql('ok');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create One-time Job",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-api-key", "value": "{{adminKey}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo One-time Job\",\n  \"type\": \"report\",\n  \"payload\": {\"channel\": \"ops\"},\n  \"scheduleType\": \"once\",\n  \"scheduleTime\": \"2026-05-09T15:00:00Z\",\n  \"maxRetries\": 2\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/jobs", "host": ["{{baseUrl}}"], "path": ["api", "jobs"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Create job returns 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "var body = pm.response.json();",
+              "if (body && (body._id || body.id)) {",
+              "  pm.collectionVariables.set('jobId', body._id || body.id);",
+              "  console.log('Saved jobId:', pm.collectionVariables.get('jobId'));",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Recurring Job (cron every minute)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-api-key", "value": "{{adminKey}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo Recurring Job - Every Minute\",\n  \"type\": \"report\",\n  \"payload\": {\"channel\": \"ops\"},\n  \"scheduleType\": \"recurring\",\n  \"scheduleTime\": \"2026-05-12T00:00:00Z\",\n  \"cronExpression\": \"*/1 * * * *\",\n  \"maxRetries\": 1\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/jobs", "host": ["{{baseUrl}}"], "path": ["api", "jobs"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Create recurring job returns 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "List Jobs",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "x-api-key", "value": "{{adminKey}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/jobs", "host": ["{{baseUrl}}"], "path": ["api", "jobs"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('List jobs returns 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Job Details",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "x-api-key", "value": "{{adminKey}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/jobs/{{jobId}}", "host": ["{{baseUrl}}"], "path": ["api", "jobs", "{{jobId}}"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Get job details returns 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cancel Job",
+      "request": {
+        "method": "PATCH",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "x-api-key", "value": "{{adminKey}}" } ],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": { "raw": "{{baseUrl}}/api/jobs/{{jobId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "jobs", "{{jobId}}", "cancel"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Cancel returns 200 or 204', function () {",
+              "  pm.expect(pm.response.code).to.be.oneOf([200,204]);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reschedule Job",
+      "request": {
+        "method": "PATCH",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "x-api-key", "value": "{{adminKey}}" } ],
+        "body": { "mode": "raw", "raw": "{ \"scheduleTime\": \"2026-05-09T16:00:00Z\" }" },
+        "url": { "raw": "{{baseUrl}}/api/jobs/{{jobId}}/reschedule", "host": ["{{baseUrl}}"], "path": ["api", "jobs", "{{jobId}}", "reschedule"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Reschedule returns 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Executions",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "x-api-key", "value": "{{adminKey}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/jobs/{{jobId}}/executions", "host": ["{{baseUrl}}"], "path": ["api", "jobs", "{{jobId}}", "executions"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Executions endpoint returns 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Notifications",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "x-api-key", "value": "{{adminKey}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/notifications", "host": ["{{baseUrl}}"], "path": ["api", "notifications"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Notifications endpoint returns 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ]
+}
